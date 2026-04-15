@@ -41,13 +41,13 @@ go build -o ask-human
 ### Arguments
 
 - `--telegram-chat`: Required Telegram chat ID
-- `--timeout`: Timeout in seconds, defaults to `120`
+- `--timeout`: Timeout in seconds, defaults to `600` (10 minutes)
 - Prompt text: Required trailing positional text that will be sent to the chat
 
 ### Example
 
 ```bash
-./ask-human --telegram-chat 123456789 --timeout 120 "What time is it?"
+./ask-human --telegram-chat 123456789 --timeout 600 "What time is it?"
 ```
 
 If a human replies before the timeout, the program prints the reply:

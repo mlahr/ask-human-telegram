@@ -19,7 +19,10 @@ const (
 	pollInterval    = time.Second
 	maxPollTimeout  = 30 * time.Second
 	tokenEnvVar     = "TELEGRAM_BOT_TOKEN"
+	defaultTimeout  = 10 * time.Minute
 )
+
+var errUsageRequested = errors.New("usage requested")
 
 type cli struct {
 	telegramChat int64
@@ -87,6 +90,10 @@ func main() {
 func run(ctx context.Context, args []string, stdout io.Writer) error {
 	cli, err := parseCLI(args)
 	if err != nil {
+		if errors.Is(err, errUsageRequested) {
+			_, writeErr := io.WriteString(stdout, usageText())
+			return writeErr
+		}
 		return err
 	}
 
@@ -125,9 +132,12 @@ func parseCLI(args []string) (cli, error) {
 	fs.SetOutput(io.Discard)
 
 	telegramChat := fs.Int64("telegram-chat", 0, "Telegram chat ID")
-	timeoutSeconds := fs.Int("timeout", 120, "Timeout in seconds")
+	timeoutSeconds := fs.Int("timeout", int(defaultTimeout/time.Second), "Timeout in seconds")
 
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return cli{}, errUsageRequested
+		}
 		return cli{}, err
 	}
 	if *telegramChat == 0 {
@@ -147,6 +157,14 @@ func parseCLI(args []string) (cli, error) {
 		timeout:      time.Duration(*timeoutSeconds) * time.Second,
 		prompt:       prompt,
 	}, nil
+}
+
+func usageText() string {
+	return "Usage: ask-human --telegram-chat <CHAT_ID> [--timeout <SECONDS>] \"<prompt>\"\n\n" +
+		"Options:\n" +
+		"  --telegram-chat <CHAT_ID>  Telegram chat ID to send the prompt to\n" +
+		"  --timeout <SECONDS>        How long to wait for a reply (default: 600)\n" +
+		"  --help                     Show this help text\n"
 }
 
 func (c telegramClient) latestUpdateOffset(ctx context.Context) (int64, error) {

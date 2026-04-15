@@ -1,6 +1,9 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -19,6 +22,43 @@ func TestParseCLI(t *testing.T) {
 	}
 	if cli.prompt != "What time is it?" {
 		t.Fatalf("prompt = %q, want %q", cli.prompt, "What time is it?")
+	}
+}
+
+func TestParseCLIDefaultTimeout(t *testing.T) {
+	cli, err := parseCLI([]string{"--telegram-chat", "1234", "What time is it?"})
+	if err != nil {
+		t.Fatalf("parseCLI returned error: %v", err)
+	}
+
+	if cli.timeout != 10*time.Minute {
+		t.Fatalf("timeout = %s, want 10m0s", cli.timeout)
+	}
+}
+
+func TestParseCLIHelp(t *testing.T) {
+	_, err := parseCLI([]string{"--help"})
+	if !errors.Is(err, errUsageRequested) {
+		t.Fatalf("parseCLI error = %v, want %v", err, errUsageRequested)
+	}
+}
+
+func TestRunHelpWritesUsage(t *testing.T) {
+	var stdout strings.Builder
+
+	if err := run(context.Background(), []string{"--help"}, &stdout); err != nil {
+		t.Fatalf("run returned error: %v", err)
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, "Usage: ask-human") {
+		t.Fatalf("help output = %q, want usage header", output)
+	}
+	if !strings.Contains(output, "--telegram-chat") {
+		t.Fatalf("help output = %q, want telegram-chat flag", output)
+	}
+	if !strings.Contains(output, "default: 600") {
+		t.Fatalf("help output = %q, want updated default timeout", output)
 	}
 }
 
