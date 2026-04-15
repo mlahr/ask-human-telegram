@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -36,6 +37,31 @@ func TestParseCLIDefaultTimeout(t *testing.T) {
 	}
 }
 
+func TestParseCLIUsesTelegramChatEnvVar(t *testing.T) {
+	t.Setenv(chatIDEnvVar, "4321")
+
+	cli, err := parseCLI([]string{"What time is it?"})
+	if err != nil {
+		t.Fatalf("parseCLI returned error: %v", err)
+	}
+
+	if cli.telegramChat != 4321 {
+		t.Fatalf("telegramChat = %d, want 4321", cli.telegramChat)
+	}
+}
+
+func TestParseCLIRejectsInvalidTelegramChatEnvVar(t *testing.T) {
+	t.Setenv(chatIDEnvVar, "abc")
+
+	_, err := parseCLI([]string{"What time is it?"})
+	if err == nil {
+		t.Fatal("parseCLI returned nil error, want invalid env var error")
+	}
+	if !strings.Contains(err.Error(), chatIDEnvVar) {
+		t.Fatalf("error = %q, want mention of %s", err.Error(), chatIDEnvVar)
+	}
+}
+
 func TestParseCLIHelp(t *testing.T) {
 	_, err := parseCLI([]string{"--help"})
 	if !errors.Is(err, errUsageRequested) {
@@ -45,6 +71,17 @@ func TestParseCLIHelp(t *testing.T) {
 
 func TestRunHelpWritesUsage(t *testing.T) {
 	var stdout strings.Builder
+	originalChatIDEnvValue, hadChatIDEnv := os.LookupEnv(chatIDEnvVar)
+	if hadChatIDEnv {
+		defer func() {
+			_ = os.Setenv(chatIDEnvVar, originalChatIDEnvValue)
+		}()
+	} else {
+		defer func() {
+			_ = os.Unsetenv(chatIDEnvVar)
+		}()
+	}
+	_ = os.Unsetenv(chatIDEnvVar)
 
 	if err := run(context.Background(), []string{"--help"}, &stdout); err != nil {
 		t.Fatalf("run returned error: %v", err)
@@ -56,6 +93,9 @@ func TestRunHelpWritesUsage(t *testing.T) {
 	}
 	if !strings.Contains(output, "--telegram-chat") {
 		t.Fatalf("help output = %q, want telegram-chat flag", output)
+	}
+	if !strings.Contains(output, chatIDEnvVar) {
+		t.Fatalf("help output = %q, want env var hint", output)
 	}
 	if !strings.Contains(output, "default: 600") {
 		t.Fatalf("help output = %q, want updated default timeout", output)

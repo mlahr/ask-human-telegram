@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -19,6 +20,7 @@ const (
 	pollInterval    = time.Second
 	maxPollTimeout  = 30 * time.Second
 	tokenEnvVar     = "TELEGRAM_BOT_TOKEN"
+	chatIDEnvVar    = "ASK_HUMAN_TELEGRAM_CHAT_ID"
 	defaultTimeout  = 10 * time.Minute
 )
 
@@ -131,7 +133,12 @@ func parseCLI(args []string) (cli, error) {
 	fs := flag.NewFlagSet("ask-human", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	telegramChat := fs.Int64("telegram-chat", 0, "Telegram chat ID")
+	defaultChatID, err := defaultTelegramChatID()
+	if err != nil {
+		return cli{}, err
+	}
+
+	telegramChat := fs.Int64("telegram-chat", defaultChatID, "Telegram chat ID")
 	timeoutSeconds := fs.Int("timeout", int(defaultTimeout/time.Second), "Timeout in seconds")
 
 	if err := fs.Parse(args); err != nil {
@@ -159,10 +166,24 @@ func parseCLI(args []string) (cli, error) {
 	}, nil
 }
 
+func defaultTelegramChatID() (int64, error) {
+	value := strings.TrimSpace(os.Getenv(chatIDEnvVar))
+	if value == "" {
+		return 0, nil
+	}
+
+	chatID, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be a valid integer chat ID", chatIDEnvVar)
+	}
+
+	return chatID, nil
+}
+
 func usageText() string {
 	return "Usage: ask-human --telegram-chat <CHAT_ID> [--timeout <SECONDS>] \"<prompt>\"\n\n" +
 		"Options:\n" +
-		"  --telegram-chat <CHAT_ID>  Telegram chat ID to send the prompt to\n" +
+		"  --telegram-chat <CHAT_ID>  Telegram chat ID to send the prompt to (defaults to ASK_HUMAN_TELEGRAM_CHAT_ID if set)\n" +
 		"  --timeout <SECONDS>        How long to wait for a reply (default: 600)\n" +
 		"  --help                     Show this help text\n"
 }
