@@ -33,12 +33,12 @@ nfpms:
       - ask-human-telegram
     formats:
       - deb
-    maintainer: "Michael"
+    maintainer: "Michael Lahr"
     description: "Send a Telegram prompt to a human and print the next reply to STDOUT."
-    homepage: "https://github.com/michael/ask-human-telegram"
+    homepage: "https://github.com/MenschMachine/ask-human-telegram"
     bindir: /usr/bin
 
 release:
   github:
-    owner: michael
+    owner: MenschMachine
     name: ask-human-telegram
