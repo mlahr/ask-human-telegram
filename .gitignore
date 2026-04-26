@@ -1,3 +1,5 @@
 /.junie*
 *.swp
 /.env
+/bin/
+/ask-human-telegram

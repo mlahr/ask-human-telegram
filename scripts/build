@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+set -eu
+
+root_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+output_dir="${1:-"$root_dir/bin"}"
+
+mkdir -p "$output_dir"
+
+go build -o "$output_dir/ask-human" "$root_dir"
+go build -o "$output_dir/notify-human" "$root_dir/cmd/notify-human"
+
+printf 'Built %s/ask-human\n' "$output_dir"
+printf 'Built %s/notify-human\n' "$output_dir"

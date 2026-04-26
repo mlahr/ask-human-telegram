@@ -3,9 +3,21 @@ version: 2
 project_name: ask-human-telegram
 
 builds:
-  - id: ask-human-telegram
+  - id: ask-human
     main: ./main.go
-    binary: ask-human-telegram
+    binary: ask-human
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+  - id: notify-human
+    main: ./cmd/notify-human
+    binary: notify-human
     env:
       - CGO_ENABLED=0
     goos:
@@ -19,7 +31,8 @@ builds:
 archives:
   - id: tarball
     builds:
-      - ask-human-telegram
+      - ask-human
+      - notify-human
     format: tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
@@ -30,11 +43,12 @@ nfpms:
   - id: deb
     package_name: ask-human-telegram
     builds:
-      - ask-human-telegram
+      - ask-human
+      - notify-human
     formats:
       - deb
     maintainer: "Michael Lahr"
-    description: "Send a Telegram prompt to a human and print the next reply to STDOUT."
+    description: "Ask or notify a human through Telegram."
     homepage: "https://github.com/MenschMachine/ask-human-telegram"
     bindir: /usr/bin
 

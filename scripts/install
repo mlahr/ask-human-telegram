@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+set -eu
+
+root_dir="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+
+if [ "${GOBIN:-}" ]; then
+	bin_dir="$GOBIN"
+else
+	gopath="$(go env GOPATH)"
+	bin_dir="$gopath/bin"
+fi
+
+mkdir -p "$bin_dir"
+
+go build -o "$bin_dir/ask-human" "$root_dir"
+go build -o "$bin_dir/notify-human" "$root_dir/cmd/notify-human"
+
+printf 'Installed %s/ask-human\n' "$bin_dir"
+printf 'Installed %s/notify-human\n' "$bin_dir"
