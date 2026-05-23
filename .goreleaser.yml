@@ -49,10 +49,10 @@ nfpms:
       - deb
     maintainer: "Michael Lahr"
     description: "Ask or notify a human through Telegram."
-    homepage: "https://github.com/MenschMachine/ask-human-telegram"
+    homepage: "https://github.com/mlahr/ask-human-telegram"
     bindir: /usr/bin
 
 release:
   github:
-    owner: MenschMachine
+    owner: mlahr
     name: ask-human-telegram

@@ -107,3 +107,7 @@ The program exits with a non-zero status if:
 ```bash
 go test ./...
 ```
+
+## License
+
+MIT
