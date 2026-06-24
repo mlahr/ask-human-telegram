@@ -80,7 +80,17 @@ export TELEGRAM_BOT_TOKEN="123456:your-bot-token"
 export ASK_HUMAN_TELEGRAM_CHAT_ID="123456789"
 ```
 
-## Build
+## Install
+
+On Debian-based Linux amd64 or arm64 systems, install the latest released Debian package:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mlahr/ask-human-telegram/main/install.sh | bash
+```
+
+The installer downloads the latest GitHub Release `.deb`, verifies it against the release `checksums.txt`, and installs both `ask-human` and `notify-human`.
+
+## Build from source
 
 Build both commands into `./bin`:
 
