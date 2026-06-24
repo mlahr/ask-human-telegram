@@ -4,6 +4,7 @@
 
 - `ask-human` sends a question to a Telegram chat, waits for the next human reply, and prints that reply to `STDOUT`.
 - `notify-human` sends a message to a Telegram chat and exits without waiting for a reply.
+- `ask-human-config` saves the Telegram bot token and default chat ID in a per-user config file.
 
 It is intended for workflows where a script or automation needs to pause and ask a real person for input.
 
@@ -84,6 +85,25 @@ export ASK_HUMAN_TELEGRAM_CHAT_ID="<CHAT_ID_FROM_GETUPDATES>"
 
 Replace `<BOT_TOKEN_FROM_BOTFATHER>` with the token returned by `@BotFather`. Replace `<CHAT_ID_FROM_GETUPDATES>` with the integer from `message.chat.id` in the `getUpdates` response.
 
+To persist those values for future runs, use `ask-human-config` after installing or building the commands:
+
+```bash
+ask-human-config
+```
+
+The command prompts for the bot token and chat ID, then writes them to the per-user config file:
+
+- `${XDG_CONFIG_HOME}/ask-human-telegram/config.env` when `XDG_CONFIG_HOME` is set
+- `${HOME}/.config/ask-human-telegram/config.env` otherwise
+
+For scripts, pass both values as flags:
+
+```bash
+ask-human-config --telegram-bot-token "<BOT_TOKEN_FROM_BOTFATHER>" --telegram-chat "<CHAT_ID_FROM_GETUPDATES>"
+```
+
+The config file is a fallback. `TELEGRAM_BOT_TOKEN` overrides the stored token. `ASK_HUMAN_TELEGRAM_CHAT_ID` overrides the stored chat ID, and `--telegram-chat` overrides both.
+
 ## Install
 
 On Debian-based Linux amd64 or arm64 systems, install the latest released Debian package:
@@ -92,23 +112,23 @@ On Debian-based Linux amd64 or arm64 systems, install the latest released Debian
 curl -fsSL https://raw.githubusercontent.com/mlahr/ask-human-telegram/main/install.sh | bash
 ```
 
-The installer downloads the latest GitHub Release `.deb`, verifies it against the release `checksums.txt`, and installs both `ask-human` and `notify-human`.
+The installer downloads the latest GitHub Release `.deb`, verifies it against the release `checksums.txt`, and installs `ask-human`, `notify-human`, and `ask-human-config`.
 
 ## Build from source
 
-Build both commands into `./bin`:
+Build all commands into `./bin`:
 
 ```bash
-./scripts/build
+make build
 ```
 
-Install both commands into `$GOBIN`, or `$GOPATH/bin` when `$GOBIN` is unset:
+Install all commands into `$GOBIN`, or `$GOPATH/bin` when `$GOBIN` is unset:
 
 ```bash
-./scripts/install
+make install
 ```
 
-Plain `go build` and `go install` operate on one package at a time, so use the scripts when you want both binaries with the names `ask-human` and `notify-human`.
+Plain `go build` and `go install` operate on one package at a time, so use the Makefile when you want all binaries with the names `ask-human`, `notify-human`, and `ask-human-config`.
 
 ## Usage
 
@@ -119,7 +139,7 @@ Plain `go build` and `go install` operate on one package at a time, so use the s
 
 ### Arguments
 
-- `--telegram-chat`: Telegram chat ID. Required unless `ASK_HUMAN_TELEGRAM_CHAT_ID` is set.
+- `--telegram-chat`: Telegram chat ID. Required unless `ASK_HUMAN_TELEGRAM_CHAT_ID` or persisted config provides a default.
 - `--timeout`: Timeout in seconds for `ask-human`, defaults to `600` (10 minutes)
 - Prompt or message text: Required trailing positional text that will be sent to the chat
 
@@ -203,7 +223,7 @@ Do not commit files that contain `TELEGRAM_BOT_TOKEN`.
 ## How it works
 
 1. Reads CLI arguments
-2. Reads `TELEGRAM_BOT_TOKEN` from the environment
+2. Reads `TELEGRAM_BOT_TOKEN` from the environment or persisted user config
 3. Checks the latest Telegram update offset
 4. Sends the prompt message to the requested chat
 5. Polls Telegram for new messages
@@ -218,8 +238,8 @@ Direct replies to the sent prompt are also accepted when they have the same Tele
 
 The program exits with a non-zero status if:
 
-- `TELEGRAM_BOT_TOKEN` is missing
-- `--telegram-chat` is missing
+- `TELEGRAM_BOT_TOKEN` is missing and no persisted bot token is configured
+- `--telegram-chat` is missing and no default chat ID is available from `ASK_HUMAN_TELEGRAM_CHAT_ID` or persisted config
 - The prompt or message text is missing
 - `ask-human --timeout` is zero or negative
 - The Telegram API returns an error
@@ -228,7 +248,7 @@ The program exits with a non-zero status if:
 ## Test
 
 ```bash
-go test ./...
+make test
 ```
 
 ## License

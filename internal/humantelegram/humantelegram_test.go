@@ -4,15 +4,27 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
 
+func useEmptyConfig(t *testing.T) string {
+	t.Helper()
+
+	configHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	t.Setenv("HOME", filepath.Join(configHome, "home"))
+	return filepath.Join(configHome, configDirName, configFileName)
+}
+
 func TestParseAskCLI(t *testing.T) {
+	useEmptyConfig(t)
 	t.Setenv(ChatIDEnvVar, "")
 
 	cli, err := ParseAskCLI([]string{"--telegram-chat", "1234", "--timeout", "45", "What", "time", "is", "it?"})
@@ -32,6 +44,7 @@ func TestParseAskCLI(t *testing.T) {
 }
 
 func TestParseAskCLIDefaultTimeout(t *testing.T) {
+	useEmptyConfig(t)
 	t.Setenv(ChatIDEnvVar, "")
 
 	cli, err := ParseAskCLI([]string{"--telegram-chat", "1234", "What time is it?"})
@@ -45,6 +58,7 @@ func TestParseAskCLIDefaultTimeout(t *testing.T) {
 }
 
 func TestParseAskCLIUsesTelegramChatEnvVar(t *testing.T) {
+	useEmptyConfig(t)
 	t.Setenv(ChatIDEnvVar, "4321")
 
 	cli, err := ParseAskCLI([]string{"What time is it?"})
@@ -58,6 +72,7 @@ func TestParseAskCLIUsesTelegramChatEnvVar(t *testing.T) {
 }
 
 func TestParseAskCLIRejectsInvalidTelegramChatEnvVar(t *testing.T) {
+	useEmptyConfig(t)
 	t.Setenv(ChatIDEnvVar, "abc")
 
 	_, err := ParseAskCLI([]string{"What time is it?"})
@@ -70,6 +85,7 @@ func TestParseAskCLIRejectsInvalidTelegramChatEnvVar(t *testing.T) {
 }
 
 func TestParseAskCLIHelp(t *testing.T) {
+	useEmptyConfig(t)
 	t.Setenv(ChatIDEnvVar, "")
 
 	_, err := ParseAskCLI([]string{"--help"})
@@ -79,6 +95,7 @@ func TestParseAskCLIHelp(t *testing.T) {
 }
 
 func TestRunAskHelpWritesUsage(t *testing.T) {
+	useEmptyConfig(t)
 	var stdout strings.Builder
 	originalChatIDEnvValue, hadChatIDEnv := os.LookupEnv(ChatIDEnvVar)
 	if hadChatIDEnv {
@@ -112,6 +129,7 @@ func TestRunAskHelpWritesUsage(t *testing.T) {
 }
 
 func TestParseNotifyCLI(t *testing.T) {
+	useEmptyConfig(t)
 	t.Setenv(ChatIDEnvVar, "")
 
 	cli, err := ParseNotifyCLI([]string{"--telegram-chat", "1234", "Deploy", "finished"})
@@ -128,6 +146,7 @@ func TestParseNotifyCLI(t *testing.T) {
 }
 
 func TestParseNotifyCLIUsesTelegramChatEnvVar(t *testing.T) {
+	useEmptyConfig(t)
 	t.Setenv(ChatIDEnvVar, "4321")
 
 	cli, err := ParseNotifyCLI([]string{"Deploy finished"})
@@ -141,6 +160,7 @@ func TestParseNotifyCLIUsesTelegramChatEnvVar(t *testing.T) {
 }
 
 func TestParseNotifyCLIRejectsMissingMessage(t *testing.T) {
+	useEmptyConfig(t)
 	t.Setenv(ChatIDEnvVar, "")
 
 	_, err := ParseNotifyCLI([]string{"--telegram-chat", "1234"})
@@ -153,6 +173,7 @@ func TestParseNotifyCLIRejectsMissingMessage(t *testing.T) {
 }
 
 func TestParseNotifyCLIRejectsMissingTelegramChat(t *testing.T) {
+	useEmptyConfig(t)
 	t.Setenv(ChatIDEnvVar, "")
 
 	_, err := ParseNotifyCLI([]string{"Deploy finished"})
@@ -165,6 +186,7 @@ func TestParseNotifyCLIRejectsMissingTelegramChat(t *testing.T) {
 }
 
 func TestParseNotifyCLIRejectsInvalidTelegramChatEnvVar(t *testing.T) {
+	useEmptyConfig(t)
 	t.Setenv(ChatIDEnvVar, "abc")
 
 	_, err := ParseNotifyCLI([]string{"Deploy finished"})
@@ -177,6 +199,7 @@ func TestParseNotifyCLIRejectsInvalidTelegramChatEnvVar(t *testing.T) {
 }
 
 func TestParseNotifyCLIHelp(t *testing.T) {
+	useEmptyConfig(t)
 	t.Setenv(ChatIDEnvVar, "")
 
 	_, err := ParseNotifyCLI([]string{"--help"})
@@ -186,6 +209,7 @@ func TestParseNotifyCLIHelp(t *testing.T) {
 }
 
 func TestRunNotifyHelpWritesUsage(t *testing.T) {
+	useEmptyConfig(t)
 	t.Setenv(ChatIDEnvVar, "")
 
 	var stdout strings.Builder
@@ -207,6 +231,7 @@ func TestRunNotifyHelpWritesUsage(t *testing.T) {
 }
 
 func TestRunNotifySendsMessageAndDoesNotFetchUpdates(t *testing.T) {
+	useEmptyConfig(t)
 	t.Setenv(ChatIDEnvVar, "")
 
 	var paths []string
@@ -251,6 +276,228 @@ func TestRunNotifySendsMessageAndDoesNotFetchUpdates(t *testing.T) {
 	}
 	if sent.Text != "Deploy finished" {
 		t.Fatalf("sent.Text = %q, want %q", sent.Text, "Deploy finished")
+	}
+}
+
+func TestDefaultConfigPathUsesXDGConfigHome(t *testing.T) {
+	configHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	t.Setenv("HOME", filepath.Join(t.TempDir(), "home"))
+
+	path, err := DefaultConfigPath()
+	if err != nil {
+		t.Fatalf("DefaultConfigPath returned error: %v", err)
+	}
+
+	want := filepath.Join(configHome, configDirName, configFileName)
+	if path != want {
+		t.Fatalf("DefaultConfigPath = %q, want %q", path, want)
+	}
+}
+
+func TestDefaultConfigPathUsesHomeWhenXDGConfigHomeIsUnset(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Setenv("HOME", home)
+
+	path, err := DefaultConfigPath()
+	if err != nil {
+		t.Fatalf("DefaultConfigPath returned error: %v", err)
+	}
+
+	want := filepath.Join(home, ".config", configDirName, configFileName)
+	if path != want {
+		t.Fatalf("DefaultConfigPath = %q, want %q", path, want)
+	}
+}
+
+func TestReadConfigFile(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.env")
+	content := strings.Join([]string{
+		"# ask-human-telegram",
+		TokenEnvVar + "= token-from-file ",
+		ChatIDEnvVar + "= -100123",
+		"IGNORED=value",
+		"",
+	}, "\n")
+	if err := os.WriteFile(configPath, []byte(content), 0600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	config, err := ReadConfigFile(configPath)
+	if err != nil {
+		t.Fatalf("ReadConfigFile returned error: %v", err)
+	}
+
+	if config.TelegramBotToken != "token-from-file" {
+		t.Fatalf("TelegramBotToken = %q, want token-from-file", config.TelegramBotToken)
+	}
+	if config.TelegramChatID != "-100123" {
+		t.Fatalf("TelegramChatID = %q, want -100123", config.TelegramChatID)
+	}
+}
+
+func TestDefaultTelegramBotTokenUsesConfigFile(t *testing.T) {
+	configPath := useEmptyConfig(t)
+	t.Setenv(TokenEnvVar, "")
+	if err := WriteConfigFile(configPath, Config{TelegramBotToken: "token-from-config", TelegramChatID: "1234"}); err != nil {
+		t.Fatalf("WriteConfigFile returned error: %v", err)
+	}
+
+	token, err := DefaultTelegramBotToken()
+	if err != nil {
+		t.Fatalf("DefaultTelegramBotToken returned error: %v", err)
+	}
+
+	if token != "token-from-config" {
+		t.Fatalf("token = %q, want token-from-config", token)
+	}
+}
+
+func TestDefaultTelegramBotTokenEnvVarOverridesConfigFile(t *testing.T) {
+	configPath := useEmptyConfig(t)
+	t.Setenv(TokenEnvVar, "token-from-env")
+	if err := WriteConfigFile(configPath, Config{TelegramBotToken: "token-from-config", TelegramChatID: "1234"}); err != nil {
+		t.Fatalf("WriteConfigFile returned error: %v", err)
+	}
+
+	token, err := DefaultTelegramBotToken()
+	if err != nil {
+		t.Fatalf("DefaultTelegramBotToken returned error: %v", err)
+	}
+
+	if token != "token-from-env" {
+		t.Fatalf("token = %q, want token-from-env", token)
+	}
+}
+
+func TestDefaultTelegramChatIDUsesConfigFile(t *testing.T) {
+	configPath := useEmptyConfig(t)
+	t.Setenv(ChatIDEnvVar, "")
+	if err := WriteConfigFile(configPath, Config{TelegramBotToken: "token-from-config", TelegramChatID: "-100123"}); err != nil {
+		t.Fatalf("WriteConfigFile returned error: %v", err)
+	}
+
+	chatID, err := DefaultTelegramChatID()
+	if err != nil {
+		t.Fatalf("DefaultTelegramChatID returned error: %v", err)
+	}
+
+	if chatID != -100123 {
+		t.Fatalf("chatID = %d, want -100123", chatID)
+	}
+}
+
+func TestDefaultTelegramChatIDEnvVarOverridesConfigFile(t *testing.T) {
+	configPath := useEmptyConfig(t)
+	t.Setenv(ChatIDEnvVar, "4321")
+	if err := WriteConfigFile(configPath, Config{TelegramBotToken: "token-from-config", TelegramChatID: "1234"}); err != nil {
+		t.Fatalf("WriteConfigFile returned error: %v", err)
+	}
+
+	chatID, err := DefaultTelegramChatID()
+	if err != nil {
+		t.Fatalf("DefaultTelegramChatID returned error: %v", err)
+	}
+
+	if chatID != 4321 {
+		t.Fatalf("chatID = %d, want 4321", chatID)
+	}
+}
+
+func TestParseAskCLIFlagOverridesEnvVarAndConfigFile(t *testing.T) {
+	configPath := useEmptyConfig(t)
+	t.Setenv(ChatIDEnvVar, "4321")
+	if err := WriteConfigFile(configPath, Config{TelegramBotToken: "token-from-config", TelegramChatID: "5678"}); err != nil {
+		t.Fatalf("WriteConfigFile returned error: %v", err)
+	}
+
+	cli, err := ParseAskCLI([]string{"--telegram-chat", "1234", "What time is it?"})
+	if err != nil {
+		t.Fatalf("ParseAskCLI returned error: %v", err)
+	}
+
+	if cli.TelegramChat != 1234 {
+		t.Fatalf("TelegramChat = %d, want 1234", cli.TelegramChat)
+	}
+}
+
+func TestRunConfigWritesConfigFile(t *testing.T) {
+	configPath := useEmptyConfig(t)
+
+	var stdout strings.Builder
+	err := RunConfig([]string{"--telegram-bot-token", "token-from-flag", "--telegram-chat", "-100123"}, strings.NewReader(""), &stdout)
+	if err != nil {
+		t.Fatalf("RunConfig returned error: %v", err)
+	}
+
+	config, err := ReadConfigFile(configPath)
+	if err != nil {
+		t.Fatalf("ReadConfigFile returned error: %v", err)
+	}
+	if config.TelegramBotToken != "token-from-flag" {
+		t.Fatalf("TelegramBotToken = %q, want token-from-flag", config.TelegramBotToken)
+	}
+	if config.TelegramChatID != "-100123" {
+		t.Fatalf("TelegramChatID = %q, want -100123", config.TelegramChatID)
+	}
+	if !strings.Contains(stdout.String(), configPath) {
+		t.Fatalf("stdout = %q, want config path %q", stdout.String(), configPath)
+	}
+
+	fileInfo, err := os.Stat(configPath)
+	if err != nil {
+		t.Fatalf("stat config file: %v", err)
+	}
+	if got := fileInfo.Mode().Perm(); got != 0600 {
+		t.Fatalf("config file mode = %v, want 0600", got)
+	}
+
+	dirInfo, err := os.Stat(filepath.Dir(configPath))
+	if err != nil {
+		t.Fatalf("stat config dir: %v", err)
+	}
+	if got := dirInfo.Mode().Perm(); got != 0700 {
+		t.Fatalf("config dir mode = %v, want 0700", got)
+	}
+}
+
+func TestRunConfigPromptsForMissingValues(t *testing.T) {
+	configPath := useEmptyConfig(t)
+
+	var stdout strings.Builder
+	err := RunConfig(nil, strings.NewReader("token-from-prompt\n1234\n"), &stdout)
+	if err != nil {
+		t.Fatalf("RunConfig returned error: %v", err)
+	}
+
+	config, err := ReadConfigFile(configPath)
+	if err != nil {
+		t.Fatalf("ReadConfigFile returned error: %v", err)
+	}
+	if config.TelegramBotToken != "token-from-prompt" {
+		t.Fatalf("TelegramBotToken = %q, want token-from-prompt", config.TelegramBotToken)
+	}
+	if config.TelegramChatID != "1234" {
+		t.Fatalf("TelegramChatID = %q, want 1234", config.TelegramChatID)
+	}
+	if !strings.Contains(stdout.String(), "Telegram bot token: ") {
+		t.Fatalf("stdout = %q, want bot token prompt", stdout.String())
+	}
+	if !strings.Contains(stdout.String(), "Telegram chat ID: ") {
+		t.Fatalf("stdout = %q, want chat ID prompt", stdout.String())
+	}
+}
+
+func TestRunConfigRejectsInvalidTelegramChat(t *testing.T) {
+	useEmptyConfig(t)
+
+	err := RunConfig([]string{"--telegram-bot-token", "token-from-flag", "--telegram-chat", "not-an-integer"}, strings.NewReader(""), io.Discard)
+	if err == nil {
+		t.Fatal("RunConfig returned nil error, want invalid chat ID error")
+	}
+	if !strings.Contains(err.Error(), ChatIDEnvVar) {
+		t.Fatalf("error = %q, want mention of %s", err.Error(), ChatIDEnvVar)
 	}
 }
 
