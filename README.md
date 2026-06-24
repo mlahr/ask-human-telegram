@@ -30,7 +30,7 @@ It is intended for workflows where a script or automation needs to pause and ask
 1. Open Telegram and start a chat with `@BotFather`.
 2. Send `/newbot`.
 3. Follow the prompts for the bot display name and bot username.
-4. Copy the HTTP API token that `@BotFather` returns. This is the value for `TELEGRAM_BOT_TOKEN`.
+4. Copy the HTTP API token that `@BotFather` returns. Use that exact token as the value for `TELEGRAM_BOT_TOKEN`.
 
 Treat the bot token as a secret. Anyone with the token can call the Telegram Bot API as that bot.
 
@@ -48,10 +48,12 @@ For a channel, add the bot as an administrator with permission to post messages.
 
 ### 3. Find the Telegram chat ID
 
-Set the token temporarily in your shell:
+In the commands below, values inside angle brackets are placeholders. Replace `<BOT_TOKEN_FROM_BOTFATHER>` with the full token that `@BotFather` gave you. Telegram bot tokens usually look like `123456789:AA...`, but the exact value is different for every bot.
+
+Set your real bot token temporarily in your shell:
 
 ```bash
-export TELEGRAM_BOT_TOKEN="123456:your-bot-token"
+export TELEGRAM_BOT_TOKEN="<BOT_TOKEN_FROM_BOTFATHER>"
 ```
 
 Send a message in the target chat, then call `getUpdates`:
@@ -64,8 +66,8 @@ Find the `message.chat.id` value in the JSON response. That integer is the chat 
 
 Chat ID shapes:
 
-- Private chat IDs are usually positive integers, for example `123456789`.
-- Group and supergroup chat IDs are usually negative integers, for example `-1001234567890`.
+- Private chat IDs are usually positive integers, for example `<PRIVATE_CHAT_ID>`.
+- Group and supergroup chat IDs are usually negative integers, for example `<GROUP_OR_SUPERGROUP_CHAT_ID>`.
 - Use the exact integer returned by Telegram, including the leading `-` when present.
 
 If `getUpdates` returns an empty `result` array, send a new message in the chat and run the `curl` command again. For groups, confirm the bot is already a member before sending that message.
@@ -76,9 +78,11 @@ Set the Telegram bot token in the `TELEGRAM_BOT_TOKEN` environment variable.
 Optionally set `ASK_HUMAN_TELEGRAM_CHAT_ID` so you do not need to pass `--telegram-chat` on every command:
 
 ```bash
-export TELEGRAM_BOT_TOKEN="123456:your-bot-token"
-export ASK_HUMAN_TELEGRAM_CHAT_ID="123456789"
+export TELEGRAM_BOT_TOKEN="<BOT_TOKEN_FROM_BOTFATHER>"
+export ASK_HUMAN_TELEGRAM_CHAT_ID="<CHAT_ID_FROM_GETUPDATES>"
 ```
+
+Replace `<BOT_TOKEN_FROM_BOTFATHER>` with the token returned by `@BotFather`. Replace `<CHAT_ID_FROM_GETUPDATES>` with the integer from `message.chat.id` in the `getUpdates` response.
 
 ## Install
 
@@ -122,7 +126,7 @@ Plain `go build` and `go install` operate on one package at a time, so use the s
 ### Example
 
 ```bash
-./ask-human --telegram-chat 123456789 --timeout 600 "What time is it?"
+./ask-human --telegram-chat <CHAT_ID_FROM_GETUPDATES> --timeout 600 "What time is it?"
 ```
 
 If a human replies before the timeout, the program prints the reply:
@@ -134,7 +138,7 @@ If a human replies before the timeout, the program prints the reply:
 Send a notification without waiting for a reply:
 
 ```bash
-./notify-human --telegram-chat 123456789 "Deploy finished"
+./notify-human --telegram-chat <CHAT_ID_FROM_GETUPDATES> "Deploy finished"
 ```
 
 If `ASK_HUMAN_TELEGRAM_CHAT_ID` is set, omit `--telegram-chat`:
@@ -183,8 +187,8 @@ notify-human "Nightly backup completed on $(hostname)"
 For local use, store configuration in a shell-specific environment file that is not committed to the repository:
 
 ```bash
-export TELEGRAM_BOT_TOKEN="123456:your-bot-token"
-export ASK_HUMAN_TELEGRAM_CHAT_ID="-1001234567890"
+export TELEGRAM_BOT_TOKEN="<BOT_TOKEN_FROM_BOTFATHER>"
+export ASK_HUMAN_TELEGRAM_CHAT_ID="<CHAT_ID_FROM_GETUPDATES>"
 ```
 
 Load it before running the commands:
