@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/michael/ask-human-telegram/internal/humantelegram"
+	"github.com/mlahr/ask-human-telegram/internal/humantelegram"
 )
 
 func main() {
